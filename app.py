@@ -1,11 +1,45 @@
-from flask import Flask, Blueprint
+from flask import Flask, Blueprint, request
 from flask_restplus import Api, Resource, fields
+from functools import wraps
 
 app = Flask(__name__)
 blueprint = Blueprint('api', __name__, url_prefix='/api')
-api = Api(blueprint, doc='/documentation') #,doc=False - Turn off - Don't show swagger documentation 
+
+authorizations = {
+    'apikey': {
+        'type': 'apiKey',
+        'in': 'header',
+        'name': 'X-API-KEY'
+    }
+}
+
+api = Api(
+            blueprint, 
+            authorizations=authorizations,
+            doc='/documentation'
+        ) #,doc=False - Turn off - Don't show swagger documentation 
 
 app.register_blueprint(blueprint)
+
+def token_required(f):
+    @wraps(f)
+    def decorate(*args, **kwargs):
+        token = None
+
+        if 'X-API-KEY' in request.headers:
+            token = request.headers['X-API-KEY']
+        
+        if not token:
+            return {'message': 'Token is missing.'}, 401
+
+        if token != 'mytoken':
+            return {'message': 'Token is wrong.'}, 401
+        
+        return f(*args, **kwargs)
+    
+    return decorate
+
+        
 
 app.config['SWAGGER_UI_JSONEDITOR'] = True
 
@@ -17,6 +51,8 @@ language.append(python)
 
 @api.route('/language')
 class Languafe(Resource):
+    @api.doc(security='apikey')
+    @token_required
     @api.marshal_with(language_dto, envelope='data')
     def get(self):
         return language
