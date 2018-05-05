@@ -1,8 +1,13 @@
-from flask import Flask
+from flask import Flask, Blueprint
 from flask_restplus import Api, Resource, fields
 
 app = Flask(__name__)
-api = Api(app)
+blueprint = Blueprint('api', __name__, url_prefix='/api')
+api = Api(blueprint, doc='/documentation') #,doc=False - Turn off - Don't show swagger documentation 
+
+app.register_blueprint(blueprint)
+
+app.config['SWAGGER_UI_JSONEDITOR'] = True
 
 language_dto = api.model('Language', {'language': fields.String('The language.')})
 
